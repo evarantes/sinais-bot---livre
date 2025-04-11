@@ -1,1 +1,2 @@
-<substituir pelo código atual do canvas>
+import asyncio
+asyncio.run(main())
