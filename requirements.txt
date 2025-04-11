@@ -1,0 +1,6 @@
+python-telegram-bot==20.0
+iqoptionapi @ git+https://github.com/Lu-Yi-Hsun/iqoptionapi.git
+ta
+nest_asyncio
+numpy
+pandas
