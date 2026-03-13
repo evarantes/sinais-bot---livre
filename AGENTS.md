@@ -72,6 +72,17 @@ node server/index.js
 
 ### Deploy no Coolify
 
-1. Usar **Docker Compose** como build pack
-2. Configurar `JWT_SECRET` como variável de ambiente no Coolify
+1. Usar **Docker Compose** como build pack no Coolify
+2. Configurar `JWT_SECRET` como variável de ambiente no Coolify (obrigatório para produção)
 3. O volume `pgdata` persiste dados do PostgreSQL entre deploys
+4. A porta exposta é `3000` (definida no `docker-compose.yml`)
+5. O health check do app fica em `GET /api/health`
+6. O app aguarda o PostgreSQL estar saudável antes de iniciar (health check do container `db`)
+
+### Gotchas para Cloud Agents
+
+- Para rodar localmente: `docker compose up -d --build` (precisa de Docker instalado e rodando)
+- Express 5 **não aceita** `app.get('*', ...)` — use middleware `app.use(...)` para catch-all
+- O catálogo de jogos (`GAME_CATALOG`) e lista de tarefas (`TASKS`) estão duplicados no frontend (`js/app.js`) e backend (`server/routes.js`); alterações devem ser feitas em ambos
+- O schema do banco (`init.sql`) usa `IF NOT EXISTS` — seguro para re-executar
+- Ao adicionar um jogo novo: (1) criar `js/games/<id>.js`, (2) adicionar entrada no `GAME_CATALOG` em `js/app.js`, (3) se houver tarefa associada, adicionar em `TASKS` nos dois arquivos
