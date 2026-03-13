@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: arcade
-      POSTGRES_PASSWORD: arcade
-      POSTGRES_DB: arcade
+      POSTGRES_USER: ${DB_USER:-arcade}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-arcade}
+      POSTGRES_DB: ${DB_NAME:-arcade}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U arcade"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-arcade}"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -18,10 +18,10 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://arcade:arcade@db:5432/arcade
-      JWT_SECRET: ${JWT_SECRET:-arcade-secret-mude-em-producao}
+      DATABASE_URL: postgresql://${DB_USER:-arcade}:${DB_PASSWORD:-arcade}@db:5432/${DB_NAME:-arcade}
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
       PORT: 3000
     depends_on:
       db:
