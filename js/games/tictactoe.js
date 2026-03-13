@@ -16,6 +16,7 @@
 
         var cells = [];
         var gameOverDiv = null;
+        var aiTimeout = null;
 
         function init() {
             board = ['','','','','','','','',''];
@@ -25,6 +26,7 @@
             grid.innerHTML = '';
             cells = [];
             if (gameOverDiv) { gameOverDiv.remove(); gameOverDiv = null; }
+            if (aiTimeout) { clearTimeout(aiTimeout); aiTimeout = null; }
 
             for (var i = 0; i < 9; i++) {
                 var cell = document.createElement('div');
@@ -41,6 +43,7 @@
                 cells.push(cell);
             }
             statusEl.textContent = 'Sua vez (X)';
+            statusEl.style.color = '#00f0ff';
             callbacks.onScore(0);
         }
 
@@ -51,7 +54,7 @@
             if (!gameActive) return;
             currentPlayer = 'O';
             statusEl.textContent = 'IA pensando...';
-            setTimeout(function() {
+            aiTimeout = setTimeout(function() {
                 if (!gameActive) return;
                 aiMove();
             }, 400);
@@ -96,46 +99,17 @@
         }
 
         function aiMove() {
-            var best = minimax(board, 'O');
-            makeMove(best.index, 'O');
+            var available = [];
+            for (var i = 0; i < 9; i++) {
+                if (board[i] === '') available.push(i);
+            }
+            if (available.length === 0) return;
+            var choice = available[Math.floor(Math.random() * available.length)];
+            makeMove(choice, 'O');
             if (gameActive) {
                 currentPlayer = 'X';
                 statusEl.textContent = 'Sua vez (X)';
             }
-        }
-
-        function minimax(b, player) {
-            var avail = [];
-            for (var i = 0; i < 9; i++) { if (b[i] === '') avail.push(i); }
-
-            var w = checkWinBoard(b);
-            if (w === 'X') return {score: -10};
-            if (w === 'O') return {score: 10};
-            if (avail.length === 0) return {score: 0};
-
-            var moves = [];
-            for (var j = 0; j < avail.length; j++) {
-                var move = {index: avail[j]};
-                b[avail[j]] = player;
-                var result = minimax(b, player === 'O' ? 'X' : 'O');
-                move.score = result.score;
-                b[avail[j]] = '';
-                moves.push(move);
-            }
-
-            var bestMove;
-            if (player === 'O') {
-                var bestScore = -Infinity;
-                for (var k = 0; k < moves.length; k++) {
-                    if (moves[k].score > bestScore) { bestScore = moves[k].score; bestMove = k; }
-                }
-            } else {
-                var bestScore2 = Infinity;
-                for (var k2 = 0; k2 < moves.length; k2++) {
-                    if (moves[k2].score < bestScore2) { bestScore2 = moves[k2].score; bestMove = k2; }
-                }
-            }
-            return moves[bestMove];
         }
 
         var WIN_COMBOS = [
@@ -144,13 +118,11 @@
             [0,4,8],[2,4,6]
         ];
 
-        function checkWin() { return checkWinBoard(board); }
-
-        function checkWinBoard(b) {
+        function checkWin() {
             for (var i = 0; i < WIN_COMBOS.length; i++) {
                 var c = WIN_COMBOS[i];
-                if (b[c[0]] !== '' && b[c[0]] === b[c[1]] && b[c[1]] === b[c[2]]) {
-                    return b[c[0]];
+                if (board[c[0]] !== '' && board[c[0]] === board[c[1]] && board[c[1]] === board[c[2]]) {
+                    return board[c[0]];
                 }
             }
             return null;
@@ -176,7 +148,6 @@
             btn.className = 'btn btn-play';
             btn.textContent = 'Reiniciar';
             btn.addEventListener('click', function() {
-                statusEl.style.color = '#00f0ff';
                 init();
             });
             gameOverDiv.appendChild(btn);
@@ -187,6 +158,7 @@
 
         return {
             destroy: function() {
+                if (aiTimeout) clearTimeout(aiTimeout);
                 cells.forEach(function(c) { c.removeEventListener('click', onCellClick); });
                 if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
             }

@@ -22,10 +22,9 @@
         var PIECE_KEYS = ['I','O','T','S','Z','J','L'];
 
         var grid, piece, pieceX, pieceY, pieceType;
-        var score, linesCleared, gameOver;
+        var score, totalLinesCleared, gameOver;
         var dropInterval, dropTime, lastTime;
         var animId = null;
-        var dropTimer = null;
 
         function init() {
             grid = [];
@@ -34,7 +33,7 @@
                 for (var c = 0; c < COLS; c++) { grid[r][c] = null; }
             }
             score = 0;
-            linesCleared = 0;
+            totalLinesCleared = 0;
             gameOver = false;
             dropInterval = 800;
             dropTime = 0;
@@ -110,9 +109,10 @@
             if (cleared > 0) {
                 var bonus = [0, 100, 300, 500, 800];
                 score += bonus[cleared] || (cleared * 200);
-                linesCleared += cleared;
+                totalLinesCleared += cleared;
                 callbacks.onScore(score);
-                dropInterval = Math.max(100, 800 - linesCleared * 20);
+                App.addStat('tetris_lines', cleared);
+                dropInterval = Math.max(100, 800 - totalLinesCleared * 20);
             }
         }
 
@@ -130,10 +130,7 @@
 
         function tryRotate() {
             var rotated = rotate(piece);
-            if (!collides(rotated, pieceX, pieceY)) {
-                piece = rotated;
-                return;
-            }
+            if (!collides(rotated, pieceX, pieceY)) { piece = rotated; return; }
             if (!collides(rotated, pieceX - 1, pieceY)) { piece = rotated; pieceX--; return; }
             if (!collides(rotated, pieceX + 1, pieceY)) { piece = rotated; pieceX++; return; }
             if (!collides(rotated, pieceX - 2, pieceY)) { piece = rotated; pieceX -= 2; return; }
@@ -174,16 +171,16 @@
                 var ghostY = pieceY;
                 while (!collides(piece, pieceX, ghostY + 1)) ghostY++;
                 var color = PIECES[pieceType].color;
+                ctx.globalAlpha = 0.2;
                 for (var pr = 0; pr < piece.length; pr++) {
                     for (var pc = 0; pc < piece[pr].length; pc++) {
                         if (piece[pr][pc]) {
-                            ctx.fillStyle = color.replace(')', ',0.2)').replace('rgb', 'rgba').replace('#', '');
-                            ctx.globalAlpha = 0.3;
+                            ctx.fillStyle = color;
                             ctx.fillRect((pieceX + pc) * CELL + 1, (ghostY + pr) * CELL + 1, CELL - 2, CELL - 2);
-                            ctx.globalAlpha = 1;
                         }
                     }
                 }
+                ctx.globalAlpha = 1;
 
                 for (var pr2 = 0; pr2 < piece.length; pr2++) {
                     for (var pc2 = 0; pc2 < piece[pr2].length; pc2++) {
@@ -228,7 +225,7 @@
         function showGameOver() {
             var overlay = document.createElement('div');
             overlay.className = 'game-over-screen';
-            overlay.innerHTML = '<h2>Game Over</h2><p>Pontuação: ' + score + '</p><p style="font-size:14px;color:#8888aa;">Linhas: ' + linesCleared + '</p>';
+            overlay.innerHTML = '<h2>Game Over</h2><p>Pontuação: ' + score + '</p><p style="font-size:14px;color:#8888aa;">Linhas: ' + totalLinesCleared + '</p>';
             var btn = document.createElement('button');
             btn.className = 'btn btn-play';
             btn.textContent = 'Reiniciar';
@@ -263,7 +260,6 @@
         return {
             destroy: function() {
                 if (animId) cancelAnimationFrame(animId);
-                if (dropTimer) clearTimeout(dropTimer);
                 document.removeEventListener('keydown', onKeyDown);
             }
         };

@@ -2,10 +2,11 @@
     window.Games = window.Games || {};
     window.Games['memory'] = function(container, callbacks) {
         var PAIRS = 8;
-        var EMOJIS = ['🎮','🎲','🎯','🎪','🚀','⭐','🌙','🔥'];
-        var cards, flipped, matched, score, moves, startTime, gameOver, lockBoard;
+        var EMOJIS = ['🎮','🎲','🎯','🎪','🎨','🎭','🎹','🎸'];
+        var cards, flipped, matched, moves, startTime, gameOver, lockBoard;
         var wrapper, gridEl, statusEl, gameOverDiv;
         var flipTimeout = null;
+        var statusInterval = null;
 
         var style = document.createElement('style');
         style.textContent = [
@@ -38,15 +39,18 @@
             shuffle(cards);
             flipped = [];
             matched = [];
-            score = 0;
             moves = 0;
             gameOver = false;
             lockBoard = false;
             startTime = Date.now();
             if (gameOverDiv) { gameOverDiv.remove(); gameOverDiv = null; }
             if (flipTimeout) { clearTimeout(flipTimeout); flipTimeout = null; }
-            callbacks.onScore(0);
+            if (statusInterval) { clearInterval(statusInterval); }
+            callbacks.onScore(100);
             render();
+            statusInterval = setInterval(function() {
+                if (!gameOver) updateStatus();
+            }, 1000);
         }
 
         function shuffle(arr) {
@@ -85,14 +89,20 @@
             updateStatus();
         }
 
-        function updateStatus() {
-            var elapsed = Math.floor((Date.now() - startTime) / 1000);
-            statusEl.innerHTML = '<span>Pares: ' + (matched.length / 2) + '/' + PAIRS + '</span><span>Jogadas: ' + moves + '</span><span>Tempo: ' + elapsed + 's</span>';
+        function getElapsedSeconds() {
+            return Math.floor((Date.now() - startTime) / 1000);
         }
 
-        var statusInterval = setInterval(function() {
-            if (!gameOver) updateStatus();
-        }, 1000);
+        function getCurrentScore() {
+            return Math.max(0, 100 - getElapsedSeconds());
+        }
+
+        function updateStatus() {
+            var elapsed = getElapsedSeconds();
+            var currentScore = getCurrentScore();
+            statusEl.innerHTML = '<span>Pares: ' + (matched.length / 2) + '/' + PAIRS + '</span><span>Jogadas: ' + moves + '</span><span>Tempo: ' + elapsed + 's</span>';
+            callbacks.onScore(currentScore);
+        }
 
         function onCardClick(e) {
             if (gameOver || lockBoard) return;
@@ -111,8 +121,6 @@
                     matched.push(i0, i1);
                     flipped = [];
                     lockBoard = false;
-                    score = (matched.length / 2) * 10;
-                    callbacks.onScore(score);
 
                     var matchedEls = gridEl.querySelectorAll('.memory-card');
                     matchedEls[i0].classList.add('matched');
@@ -136,11 +144,14 @@
 
         function endGame() {
             gameOver = true;
-            var elapsed = Math.floor((Date.now() - startTime) / 1000);
-            var timeBonus = Math.max(0, 100 - elapsed);
-            var finalScore = score + timeBonus;
+            if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
+            var elapsed = getElapsedSeconds();
+            var finalScore = Math.max(0, 100 - elapsed);
             callbacks.onScore(finalScore);
             callbacks.onGameOver(finalScore);
+            if (elapsed < 60) {
+                App.addStat('memory_fast', 1);
+            }
             showGameOver(finalScore, elapsed);
         }
 
@@ -162,7 +173,7 @@
 
         return {
             destroy: function() {
-                clearInterval(statusInterval);
+                if (statusInterval) clearInterval(statusInterval);
                 if (flipTimeout) clearTimeout(flipTimeout);
                 if (style.parentNode) style.parentNode.removeChild(style);
                 if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
