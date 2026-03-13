@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcade Clássico - Jogos Retrô</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="header">
+            <div class="header-left">
+                <h1 class="logo">🕹️ ARCADE</h1>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-btn active" data-view="lobby">🏠 Início</button>
+                <button class="nav-btn" data-view="store">🏪 Loja</button>
+                <button class="nav-btn" data-view="tasks">📋 Tarefas</button>
+                <button class="nav-btn" data-view="profile">👤 Perfil</button>
+            </nav>
+            <div class="header-right">
+                <div class="credit-display">
+                    <span class="credit-icon">🪙</span>
+                    <span id="credit-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <section id="lobby-view" class="view active">
+                <div class="view-header">
+                    <h2>Jogos Clássicos</h2>
+                    <div class="filter-tabs">
+                        <button class="filter-btn active" data-filter="all">Todos</button>
+                        <button class="filter-btn" data-filter="free">Grátis</button>
+                        <button class="filter-btn" data-filter="unlocked">Desbloqueados</button>
+                        <button class="filter-btn" data-filter="locked">Bloqueados</button>
+                    </div>
+                </div>
+                <div id="games-grid" class="games-grid"></div>
+            </section>
+
+            <section id="store-view" class="view">
+                <div class="view-header">
+                    <h2>Loja de Créditos</h2>
+                    <p class="view-subtitle">Compre créditos para desbloquear novos jogos!</p>
+                </div>
+                <div class="store-grid">
+                    <div class="store-card" data-credits="10">
+                        <div class="store-icon">🪙</div>
+                        <h3>Pacote Pequeno</h3>
+                        <p class="store-amount">10 Créditos</p>
+                        <button class="btn btn-buy" onclick="App.buyCredits(10)">Comprar</button>
+                    </div>
+                    <div class="store-card popular" data-credits="25">
+                        <div class="popular-badge">Popular</div>
+                        <div class="store-icon">💰</div>
+                        <h3>Pacote Médio</h3>
+                        <p class="store-amount">25 Créditos</p>
+                        <button class="btn btn-buy" onclick="App.buyCredits(25)">Comprar</button>
+                    </div>
+                    <div class="store-card" data-credits="50">
+                        <div class="store-icon">💎</div>
+                        <h3>Pacote Grande</h3>
+                        <p class="store-amount">50 Créditos</p>
+                        <button class="btn btn-buy" onclick="App.buyCredits(50)">Comprar</button>
+                    </div>
+                    <div class="store-card premium" data-credits="100">
+                        <div class="popular-badge">Premium</div>
+                        <div class="store-icon">👑</div>
+                        <h3>Pacote Mega</h3>
+                        <p class="store-amount">100 Créditos</p>
+                        <button class="btn btn-buy" onclick="App.buyCredits(100)">Comprar</button>
+                    </div>
+                </div>
+                <div class="store-section">
+                    <h3>🎁 Créditos Grátis</h3>
+                    <p>Complete tarefas para ganhar créditos sem pagar!</p>
+                    <button class="btn btn-secondary" onclick="App.navigate('tasks')">Ver Tarefas</button>
+                </div>
+            </section>
+
+            <section id="tasks-view" class="view">
+                <div class="view-header">
+                    <h2>Tarefas</h2>
+                    <p class="view-subtitle">Complete tarefas para ganhar créditos!</p>
+                </div>
+                <div id="tasks-list" class="tasks-list"></div>
+            </section>
+
+            <section id="profile-view" class="view">
+                <div class="view-header">
+                    <h2>Meu Perfil</h2>
+                </div>
+                <div class="profile-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-icon">🎮</span>
+                            <span id="stat-played" class="stat-value">0</span>
+                            <span class="stat-label">Partidas Jogadas</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">🏆</span>
+                            <span id="stat-score" class="stat-value">0</span>
+                            <span class="stat-label">Pontuação Total</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">🔓</span>
+                            <span id="stat-unlocked" class="stat-value">0</span>
+                            <span class="stat-label">Jogos Desbloqueados</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-icon">✅</span>
+                            <span id="stat-tasks" class="stat-value">0</span>
+                            <span class="stat-label">Tarefas Completas</span>
+                        </div>
+                    </div>
+                    <div class="highscores-section">
+                        <h3>🏅 Recordes</h3>
+                        <div id="highscores-list" class="highscores-list"></div>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-danger" onclick="App.resetProgress()">🗑️ Resetar Progresso</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div id="game-overlay" class="game-overlay hidden">
+            <div class="game-header">
+                <button class="btn btn-back" onclick="App.exitGame()">← Voltar</button>
+                <h2 id="game-title"></h2>
+                <div class="game-score">
+                    Pontos: <span id="game-score">0</span>
+                </div>
+            </div>
+            <div id="game-container" class="game-container"></div>
+            <div id="game-controls" class="game-controls"></div>
+        </div>
+
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div class="modal">
+                <h3 id="modal-title"></h3>
+                <p id="modal-message"></p>
+                <div id="modal-actions" class="modal-actions"></div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
