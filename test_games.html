@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><title>Game Test</title></head>
+<body>
+<script>
+var save = {
+  credits: 1000,
+  unlockedGames: ['breakout','minesweeper','game2048','hangman','simon','whackamole','slidingpuzzle','blackjack','wordsearch','maze','spaceinvaders','flappybird','connectfour','sudoku','checkers','dinorun','bubbleshooter','match3','fruitninja','solitaire','pacman','asteroids','frogger','arkanoid','galaga','towerdefense','racing','platformer','pinball','sokoban'],
+  stats: {gamesPlayed:0,totalScore:0,uniqueGames:0,unlockedCount:30,gamesPlayedList:[]},
+  highScores: {},
+  completedTasks: []
+};
+localStorage.setItem('arcade_save', JSON.stringify(save));
+window.location.href = '/';
+</script>
+</body>
+</html>

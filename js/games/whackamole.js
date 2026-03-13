@@ -1,131 +1,54 @@
 (function(){
-    window.Games = window.Games || {};
-    window.Games['whackamole'] = function(container, callbacks) {
-        var score = 0;
-        var timeLeft = 30;
-        var intervals = [];
-        var timeouts = [];
-        var destroyed = false;
-        var moleSpeed = 1500;
+window.Games.whackamole = function(container, cb) {
+    const HOLES=9, DURATION=30;
+    let score=0, timeLeft=DURATION, active=-1, timer, spawnTimer, running=false;
+    const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:16px;';
+    const info=document.createElement('div'); info.style.cssText='display:flex;gap:24px;font-size:16px;font-weight:bold;';
+    const grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(3,100px);gap:12px;';
+    const startBtn=document.createElement('button'); startBtn.className='btn btn-play'; startBtn.textContent='Iniciar'; startBtn.onclick=start;
+    wrap.append(info,grid,startBtn); container.appendChild(wrap);
 
-        var wrapper = document.createElement('div');
-        wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;user-select:none;';
-        container.appendChild(wrapper);
-
-        var timerEl = document.createElement('div');
-        timerEl.style.cssText = 'font-family:"Press Start 2P",cursive;font-size:16px;color:#00f0ff;';
-        timerEl.textContent = 'Tempo: 30s';
-        wrapper.appendChild(timerEl);
-
-        var grid = document.createElement('div');
-        grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,80px);gap:12px;';
-        wrapper.appendChild(grid);
-
-        var holes = [];
-        for (var i = 0; i < 9; i++) {
-            var hole = document.createElement('div');
-            hole.style.cssText = 'width:80px;height:80px;background:#1a1a3e;border:2px solid #2a2a5a;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;position:relative;overflow:hidden;';
-            hole.dataset.idx = i;
-            hole.dataset.mole = '0';
-
-            var moleSpan = document.createElement('span');
-            moleSpan.style.cssText = 'font-size:40px;opacity:0;transform:translateY(40px);transition:all 0.2s ease;position:absolute;';
-            moleSpan.textContent = '\uD83D\uDC39';
-            hole.appendChild(moleSpan);
-
-            hole.addEventListener('click', function(e) {
-                var h = this;
-                if (h.dataset.mole === '1') {
-                    h.dataset.mole = '0';
-                    var sp = h.querySelector('span');
-                    sp.style.opacity = '0';
-                    sp.style.transform = 'translateY(40px)';
-                    h.style.background = '#00ff88';
-                    var resetTimeout = setTimeout(function() {
-                        if (!destroyed) h.style.background = '#1a1a3e';
-                    }, 200);
-                    timeouts.push(resetTimeout);
-                    score += 10;
-                    callbacks.onScore(score);
-                }
-            });
-
-            grid.appendChild(hole);
-            holes.push(hole);
-        }
-
-        function showMole() {
-            if (destroyed) return;
-            var available = holes.filter(function(h) { return h.dataset.mole === '0'; });
-            if (available.length === 0) return;
-            var hole = available[Math.floor(Math.random() * available.length)];
-            hole.dataset.mole = '1';
-            var sp = hole.querySelector('span');
-            sp.style.opacity = '1';
-            sp.style.transform = 'translateY(0)';
-
-            var duration = 800 + Math.random() * (moleSpeed - 300);
-            var hideTimeout = setTimeout(function() {
-                if (!destroyed && hole.dataset.mole === '1') {
-                    hole.dataset.mole = '0';
-                    sp.style.opacity = '0';
-                    sp.style.transform = 'translateY(40px)';
-                }
-            }, duration);
-            timeouts.push(hideTimeout);
-        }
-
-        var moleInterval = setInterval(function() {
-            showMole();
-            if (timeLeft < 15) showMole();
-        }, 700);
-        intervals.push(moleInterval);
-
-        var timerInterval = setInterval(function() {
-            if (destroyed) return;
+    const holes=[];
+    for(let i=0;i<HOLES;i++){
+        const h=document.createElement('div');
+        h.style.cssText='width:100px;height:100px;border-radius:50%;background:#1a1a3e;border:3px solid #2a2a5a;display:flex;align-items:center;justify-content:center;font-size:40px;cursor:pointer;transition:all 0.1s;user-select:none;';
+        h.onclick=()=>whack(i);
+        grid.appendChild(h); holes.push(h);
+    }
+    function render(){
+        info.innerHTML=`<span style="color:#00f0ff">Pontos: ${score}</span><span style="color:#ffcc00">Tempo: ${timeLeft}s</span>`;
+        holes.forEach((h,i)=>{
+            if(i===active){ h.textContent='🐹'; h.style.borderColor='#00ff88'; h.style.background='#1a3a1e'; }
+            else { h.textContent=''; h.style.borderColor='#2a2a5a'; h.style.background='#1a1a3e'; }
+        });
+    }
+    function spawn(){
+        active=Math.floor(Math.random()*HOLES);
+        render();
+        setTimeout(()=>{ if(active>=0){ active=-1; render(); } }, 800+Math.random()*600);
+    }
+    function whack(i){
+        if(!running||i!==active) return;
+        score+=10; cb.onScore(score); active=-1;
+        holes[i].textContent='💥'; holes[i].style.borderColor='#ffcc00';
+        setTimeout(render,200);
+    }
+    function start(){
+        score=0; timeLeft=DURATION; running=true; cb.onScore(0);
+        startBtn.style.display='none';
+        spawnTimer=setInterval(spawn,1000);
+        timer=setInterval(()=>{
             timeLeft--;
-            timerEl.textContent = 'Tempo: ' + timeLeft + 's';
-
-            if (timeLeft <= 10) moleSpeed = 900;
-            if (timeLeft <= 5) moleSpeed = 600;
-
-            if (timeLeft <= 0) {
-                endGame();
+            if(timeLeft<=0){ running=false; clearInterval(timer); clearInterval(spawnTimer); active=-1; render();
+                info.innerHTML+=`<span style="color:#ff00aa">Fim!</span>`;
+                startBtn.style.display='block'; startBtn.textContent='Jogar de Novo';
+                cb.onGameOver(score);
             }
-        }, 1000);
-        intervals.push(timerInterval);
-
-        function endGame() {
-            if (destroyed) return;
-            clearAllTimers();
-
-            var overlay = document.createElement('div');
-            overlay.className = 'game-over-screen';
-            overlay.innerHTML = '<h2>Fim de Jogo!</h2>' +
-                '<p>Pontuação: ' + score + '</p>' +
-                '<button class="btn btn-play" style="margin-top:12px;">Reiniciar</button>';
-            overlay.querySelector('button').addEventListener('click', function() {
-                container.innerHTML = '';
-                window.Games['whackamole'](container, callbacks);
-            });
-            container.appendChild(overlay);
-
-            callbacks.onGameOver(score);
-        }
-
-        function clearAllTimers() {
-            intervals.forEach(function(id) { clearInterval(id); });
-            timeouts.forEach(function(id) { clearTimeout(id); });
-            intervals = [];
-            timeouts = [];
-        }
-
-        return {
-            destroy: function() {
-                destroyed = true;
-                clearAllTimers();
-                container.innerHTML = '';
-            }
-        };
-    };
+            render();
+        },1000);
+        render();
+    }
+    render();
+    return { destroy(){ clearInterval(timer); clearInterval(spawnTimer); running=false; } };
+};
 })();

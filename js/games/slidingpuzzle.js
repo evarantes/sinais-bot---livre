@@ -1,122 +1,54 @@
 (function(){
-    window.Games = window.Games || {};
-    window.Games['slidingpuzzle'] = function(container, callbacks) {
-        var moves = 0;
-        var destroyed = false;
-        var tiles = [];
-        var emptyIdx = 15;
-        var solved = false;
+window.Games.slidingpuzzle = function(container, cb) {
+    const SZ=4, TILE=80;
+    let tiles, moves, score, done, timer, startTime;
+    const wrap=document.createElement('div'); wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:16px;';
+    const info=document.createElement('div'); info.style.cssText='font-size:14px;color:#8888aa;';
+    const board=document.createElement('div'); board.style.cssText=`display:grid;grid-template-columns:repeat(${SZ},${TILE}px);gap:4px;`;
+    const restartBtn=document.createElement('button'); restartBtn.className='btn btn-secondary'; restartBtn.textContent='Embaralhar'; restartBtn.onclick=init;
+    wrap.append(info,board,restartBtn); container.appendChild(wrap);
 
-        var wrapper = document.createElement('div');
-        wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:16px;user-select:none;';
-        container.appendChild(wrapper);
-
-        var movesEl = document.createElement('div');
-        movesEl.style.cssText = 'font-family:"Press Start 2P",cursive;font-size:14px;color:#00f0ff;';
-        movesEl.textContent = 'Movimentos: 0';
-        wrapper.appendChild(movesEl);
-
-        var board = document.createElement('div');
-        board.style.cssText = 'display:grid;grid-template-columns:repeat(4,80px);gap:4px;background:#0a0a1a;padding:4px;border-radius:12px;border:2px solid #2a2a5a;';
-        wrapper.appendChild(board);
-
-        for (var i = 0; i < 16; i++) {
-            tiles.push(i);
-        }
-
-        function shuffle() {
-            var current = 15;
-            for (var i = 0; i < 500; i++) {
-                var neighbors = getNeighbors(current);
-                var pick = neighbors[Math.floor(Math.random() * neighbors.length)];
-                tiles[current] = tiles[pick];
-                tiles[pick] = 0;
-                current = pick;
-            }
-            emptyIdx = current;
-        }
-
-        function getNeighbors(idx) {
-            var row = Math.floor(idx / 4);
-            var col = idx % 4;
-            var result = [];
-            if (row > 0) result.push(idx - 4);
-            if (row < 3) result.push(idx + 4);
-            if (col > 0) result.push(idx - 1);
-            if (col < 3) result.push(idx + 1);
-            return result;
-        }
-
-        function isSolved() {
-            for (var i = 0; i < 15; i++) {
-                if (tiles[i] !== i + 1) return false;
-            }
-            return tiles[15] === 0;
-        }
-
-        function render() {
-            board.innerHTML = '';
-            for (var i = 0; i < 16; i++) {
-                var cell = document.createElement('div');
-                if (tiles[i] === 0) {
-                    cell.style.cssText = 'width:80px;height:80px;background:transparent;border-radius:8px;';
-                } else {
-                    cell.style.cssText = 'width:80px;height:80px;background:#1a1a3e;border:1px solid #2a2a5a;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:"Press Start 2P",cursive;font-size:16px;color:#00f0ff;transition:all 0.15s ease;';
-                    cell.textContent = tiles[i];
-                    cell.dataset.pos = i;
-                    cell.addEventListener('mouseenter', function() { this.style.background = '#222260'; });
-                    cell.addEventListener('mouseleave', function() { this.style.background = '#1a1a3e'; });
-                    cell.addEventListener('click', function() {
-                        if (destroyed || solved) return;
-                        var pos = parseInt(this.dataset.pos);
-                        handleClick(pos);
-                    });
-                }
-                board.appendChild(cell);
-            }
-        }
-
-        function handleClick(pos) {
-            var neighbors = getNeighbors(pos);
-            if (neighbors.indexOf(emptyIdx) === -1) return;
-
-            tiles[emptyIdx] = tiles[pos];
-            tiles[pos] = 0;
-            emptyIdx = pos;
-            moves++;
-            movesEl.textContent = 'Movimentos: ' + moves;
-
-            var currentScore = Math.max(100, 1000 - moves * 5);
-            callbacks.onScore(currentScore);
-
-            render();
-
-            if (isSolved()) {
-                solved = true;
-                var finalScore = Math.max(100, 1000 - moves * 5);
-                var overlay = document.createElement('div');
-                overlay.className = 'game-over-screen';
-                overlay.innerHTML = '<h2>Parabéns!</h2>' +
-                    '<p>Resolvido em ' + moves + ' movimentos</p>' +
-                    '<p>Pontuação: ' + finalScore + '</p>' +
-                    '<button class="btn btn-play" style="margin-top:12px;">Reiniciar</button>';
-                overlay.querySelector('button').addEventListener('click', function() {
-                    container.innerHTML = '';
-                    window.Games['slidingpuzzle'](container, callbacks);
-                });
-                container.appendChild(overlay);
-                callbacks.onGameOver(finalScore);
-            }
-        }
-
-        shuffle();
+    function init(){
+        tiles=Array.from({length:SZ*SZ-1},(_,i)=>i+1); tiles.push(0);
+        for(let i=tiles.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tiles[i],tiles[j]]=[tiles[j],tiles[i]]; }
+        if(!isSolvable()) [tiles[0],tiles[1]]=[tiles[1],tiles[0]];
+        moves=0; score=0; done=false; startTime=Date.now(); cb.onScore(0);
+        if(timer) clearInterval(timer);
+        timer=setInterval(()=>{ if(!done) render(); },1000);
         render();
-
-        return {
-            destroy: function() {
-                destroyed = true;
-                container.innerHTML = '';
-            }
-        };
-    };
+    }
+    function isSolvable(){
+        let inv=0;
+        const flat=tiles.filter(t=>t!==0);
+        for(let i=0;i<flat.length;i++) for(let j=i+1;j<flat.length;j++) if(flat[i]>flat[j]) inv++;
+        const emptyRow=SZ-Math.floor(tiles.indexOf(0)/SZ);
+        return SZ%2!==0?inv%2===0:(emptyRow%2===0)!==(inv%2===0);
+    }
+    function isWon(){ return tiles.every((v,i)=>i===tiles.length-1?v===0:v===i+1); }
+    function render(){
+        const elapsed=Math.floor((Date.now()-startTime)/1000);
+        info.textContent=done?`🎉 Completo! ${moves} movimentos, ${elapsed}s`:`Movimentos: ${moves} | Tempo: ${elapsed}s`;
+        board.innerHTML='';
+        tiles.forEach((v,i)=>{
+            const cell=document.createElement('div');
+            cell.style.cssText=`width:${TILE}px;height:${TILE}px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:22px;font-weight:bold;cursor:pointer;transition:all 0.15s;user-select:none;`;
+            if(v===0){ cell.style.background='transparent'; }
+            else { cell.style.background='#2a2a5a'; cell.style.border='1px solid #3a3a6a'; cell.style.color='#00f0ff'; cell.textContent=v; }
+            cell.onclick=()=>clickTile(i);
+            board.appendChild(cell);
+        });
+    }
+    function clickTile(i){
+        if(done) return;
+        const ei=tiles.indexOf(0);
+        const r1=Math.floor(i/SZ),c1=i%SZ,r2=Math.floor(ei/SZ),c2=ei%SZ;
+        if((Math.abs(r1-r2)+Math.abs(c1-c2))===1){
+            [tiles[i],tiles[ei]]=[tiles[ei],tiles[i]]; moves++;
+            if(isWon()){ done=true; score=Math.max(10,200-moves*2); cb.onScore(score); cb.onGameOver(score); clearInterval(timer); }
+            render();
+        }
+    }
+    init();
+    return { destroy(){ if(timer) clearInterval(timer); } };
+};
 })();
