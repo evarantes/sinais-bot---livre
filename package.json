@@ -1,7 +1,7 @@
 {
-  "name": "arcade-classico",
+  "name": "codexia-jogos-retro",
   "version": "1.0.0",
-  "description": "Plataforma de jogos clássicos com sistema de créditos",
+  "description": "Codexia - Jogos Retrô com sistema de créditos e tarefas",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",

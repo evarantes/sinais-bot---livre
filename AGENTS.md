@@ -4,7 +4,7 @@
 
 ### Overview
 
-**Classic Arcade Game Platform** — web app com 35 jogos clássicos, sistema de créditos/desbloqueio, tarefas e autenticação, com dados persistidos em PostgreSQL.
+**Codexia - Jogos Retrô** — web app com 35 jogos clássicos, sistema de créditos/desbloqueio, tarefas e autenticação, com dados persistidos em PostgreSQL.
 
 ### Tech stack
 
