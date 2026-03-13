@@ -4,29 +4,43 @@
 
 ### Overview
 
-This is a **Telegram trading bot** that integrates with the IQ Option platform. It uses `python-telegram-bot` v20.0 for Telegram interaction and `iqoptionapi` for IQ Option trading, plus `ta`/`numpy`/`pandas` for technical analysis.
+This is a **static HTML/CSS/JS arcade game platform** ("Arcade Clássico - Jogos Retrô"). No build tools, no package managers, no bundlers. All games are vanilla JavaScript files loaded dynamically via `<script>` tags from `js/games/`.
 
-### Development environment
+### Project structure
 
-- **Python 3.12** with a virtual environment at `venv/`.
-- Activate the venv before running anything: `source venv/bin/activate`
-- Install deps: `pip install -r requirements.txt`
+- `index.html` - Main page with lobby, store, tasks, profile views
+- `css/style.css` - Neon/dark theme styles
+- `js/app.js` - Core app logic (navigation, game loading, credits, tasks, localStorage persistence)
+- `js/games/*.js` - Individual game files, each registering on `window.Games[gameId]`
 
-### Running
+### Development server
 
-- Entry point: `python main.py` (via `Procfile`).
-- **Note:** `main.py` is currently a stub — it calls `asyncio.run(main())` but the `main()` function is not defined, so it will raise `NameError`. This is the existing state of the repository.
+Serve files with any static HTTP server from the workspace root:
+
+```
+npx http-server /workspace -p 8080 --cors -c-1
+```
+
+Then open `http://localhost:8080` in a browser.
 
 ### Linting
 
-- `pylint` is available as a transitive dependency (from `iqoptionapi`). Run: `python -m pylint main.py`
-- No other linting/formatting tools are configured in this repo.
+No formal linter is configured. Use `node --check <file>.js` to validate JavaScript syntax:
+
+```
+node --check js/app.js
+node --check js/games/breakout.js
+```
 
 ### Testing
 
-- There are no automated tests in this repository.
+- No automated test framework. All testing is manual via the browser.
+- Each game file can be syntax-checked with `node --check`.
+- Games are loaded on-demand when clicked in the lobby UI.
 
 ### Key gotchas
 
-- The `iqoptionapi` package is installed from a GitHub repo (`Lu-Yi-Hsun/iqoptionapi`), not PyPI. Network connectivity is required during dependency installation.
-- `python3.12-venv` system package must be installed for `python3 -m venv` to work (pre-installed in the snapshot).
+- Free games (cost=0) can be played immediately. Paid games require credits (buy via Store or complete Tasks).
+- Game state (credits, unlocked games, high scores, tasks) persists in `localStorage` under key `arcade_save`.
+- The game catalog is defined in `GAME_CATALOG` array in `js/app.js`. Each game's `id` must match its filename in `js/games/`.
+- Chrome in the Cloud VM may show a "Restore pages?" dialog on restart; use `--user-data-dir` with a fresh directory to avoid this.
