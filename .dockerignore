@@ -1,0 +1,10 @@
+venv/
+.git/
+.gitignore
+*.md
+main.py
+Procfile
+requirements.txt
+test_games.html
+__pycache__/
+*.pyc
