@@ -4,43 +4,36 @@
 
 ### Overview
 
-This is a **static HTML/CSS/JS arcade game platform** ("Arcade Clássico - Jogos Retrô"). No build tools, no package managers, no bundlers. All games are vanilla JavaScript files loaded dynamically via `<script>` tags from `js/games/`.
+This is a **Classic Arcade Game Platform** — a web application with 35 classic games, a credit/unlock system, and a task/achievement system. All frontend, no backend.
 
-### Project structure
+### Tech stack
 
-- `index.html` - Main page with lobby, store, tasks, profile views
-- `css/style.css` - Neon/dark theme styles
-- `js/app.js` - Core app logic (navigation, game loading, credits, tasks, localStorage persistence)
-- `js/games/*.js` - Individual game files, each registering on `window.Games[gameId]`
+- Pure HTML5 + CSS3 + vanilla JavaScript (no frameworks or build tools)
+- HTML5 Canvas for action games, DOM for puzzle/board games
+- `localStorage` for persistence (credits, unlocks, stats, high scores)
 
-### Development server
+### Running
 
-Serve files with any static HTTP server from the workspace root:
+- Serve with any HTTP server: `python3 -m http.server 8080` from the repo root
+- Open `http://localhost:8080` in a browser
+- No build step required
 
-```
-npx http-server /workspace -p 8080 --cors -c-1
-```
+### Structure
 
-Then open `http://localhost:8080` in a browser.
+- `index.html` — main SPA entry point
+- `css/style.css` — all styles (dark arcade theme)
+- `js/app.js` — main app logic (navigation, credits, tasks, game loading)
+- `js/games/*.js` — 35 individual game files, loaded dynamically on demand
 
-### Linting
+### Game tiers
 
-No formal linter is configured. Use `node --check <file>.js` to validate JavaScript syntax:
-
-```
-node --check js/app.js
-node --check js/games/breakout.js
-```
-
-### Testing
-
-- No automated test framework. All testing is manual via the browser.
-- Each game file can be syntax-checked with `node --check`.
-- Games are loaded on-demand when clicked in the lobby UI.
+- **Free (5):** Snake, Tic-Tac-Toe, Pong, Memory, Tetris
+- **10 credits (10):** Breakout, Minesweeper, 2048, Hangman, Simon, Whack-a-Mole, Sliding Puzzle, Blackjack, Word Search, Maze
+- **20 credits (10):** Space Invaders, Flappy Bird, Connect Four, Sudoku, Checkers, Dino Run, Bubble Shooter, Match 3, Fruit Ninja, Solitaire
+- **30 credits (10):** Pac-Man, Asteroids, Frogger, Arkanoid, Galaga, Tower Defense, Racing, Platformer, Pinball, Sokoban
 
 ### Key gotchas
 
-- Free games (cost=0) can be played immediately. Paid games require credits (buy via Store or complete Tasks).
-- Game state (credits, unlocked games, high scores, tasks) persists in `localStorage` under key `arcade_save`.
-- The game catalog is defined in `GAME_CATALOG` array in `js/app.js`. Each game's `id` must match its filename in `js/games/`.
-- Chrome in the Cloud VM may show a "Restore pages?" dialog on restart; use `--user-data-dir` with a fresh directory to avoid this.
+- Game scripts are loaded dynamically via `<script>` injection when a game is first opened. The server must serve JS files from `js/games/`.
+- All game state is in `localStorage` under key `arcade_save`. Clear it to reset.
+- No linting or testing tools are configured in this repo.
