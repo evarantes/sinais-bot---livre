@@ -1,6 +1,6 @@
+node_modules/
 venv/
 .git/
-.gitignore
 *.md
 main.py
 Procfile

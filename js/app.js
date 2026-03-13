@@ -65,19 +65,100 @@ const App = {
     currentGameInstance: null,
     currentScore: 0,
     loadedScripts: {},
+    username: null,
 
-    init() {
-        this.load();
-        this.renderLobby();
-        this.renderTasks();
-        this.updateCreditsUI();
+    async init() {
         this.setupNav();
         this.setupFilters();
+        if (API.token) {
+            try {
+                await this.loadProfile();
+                this.hideAuth();
+            } catch {
+                this.showAuth();
+            }
+        } else {
+            this.showAuth();
+        }
+    },
+
+    showAuth() {
+        document.getElementById('auth-overlay').classList.remove('hidden');
+        document.getElementById('auth-error').textContent = '';
+        document.getElementById('auth-username').value = '';
+        document.getElementById('auth-password').value = '';
+    },
+
+    hideAuth() {
+        document.getElementById('auth-overlay').classList.add('hidden');
+    },
+
+    async doLogin() {
+        const u = document.getElementById('auth-username').value.trim();
+        const p = document.getElementById('auth-password').value;
+        if (!u || !p) { document.getElementById('auth-error').textContent = 'Preencha todos os campos'; return; }
+        try {
+            document.getElementById('auth-login-btn').disabled = true;
+            const data = await API.login(u, p);
+            API.setToken(data.token);
+            await this.loadProfile();
+            this.hideAuth();
+        } catch (err) {
+            document.getElementById('auth-error').textContent = err.message;
+        } finally {
+            document.getElementById('auth-login-btn').disabled = false;
+        }
+    },
+
+    async doRegister() {
+        const u = document.getElementById('auth-username').value.trim();
+        const p = document.getElementById('auth-password').value;
+        if (!u || !p) { document.getElementById('auth-error').textContent = 'Preencha todos os campos'; return; }
+        try {
+            document.getElementById('auth-register-btn').disabled = true;
+            const data = await API.register(u, p);
+            API.setToken(data.token);
+            await this.loadProfile();
+            this.hideAuth();
+        } catch (err) {
+            document.getElementById('auth-error').textContent = err.message;
+        } finally {
+            document.getElementById('auth-register-btn').disabled = false;
+        }
+    },
+
+    logout() {
+        API.clearToken();
+        this.credits = 0;
+        this.unlockedGames = [];
+        this.stats = { gamesPlayed:0, totalScore:0, uniqueGames:0, unlockedCount:0, gamesPlayedList:[] };
+        this.highScores = {};
+        this.completedTasks = [];
+        this.username = null;
+        this.updateCreditsUI();
+        this.showAuth();
+    },
+
+    async loadProfile() {
+        const data = await API.profile();
+        this.username = data.user.username;
+        this.credits = data.user.credits;
+        this.unlockedGames = data.unlockedGames || [];
+        this.stats = data.stats || { gamesPlayed:0, totalScore:0, uniqueGames:0, unlockedCount:0, gamesPlayedList:[] };
+        this.highScores = data.highScores || {};
+        this.completedTasks = data.completedTasks || [];
+        this.updateCreditsUI();
+        document.getElementById('user-display').textContent = '👤 ' + this.username;
+        this.renderLobby();
+        this.renderTasks();
     },
 
     setupNav() {
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', () => this.navigate(btn.dataset.view));
+        });
+        document.getElementById('auth-password').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.doLogin();
         });
     },
 
@@ -175,9 +256,15 @@ const App = {
 
     getTaskProgress(task) {
         const s = this.stats;
-        if (task.stat === 'uniqueGames') return new Set(s.gamesPlayedList).size;
+        if (task.stat === 'uniqueGames') return s.uniqueGames || 0;
         if (task.stat === 'unlockedCount') return this.unlockedGames.length;
-        return s[task.stat] || 0;
+        if (task.stat === 'gamesPlayed') return s.gamesPlayed || 0;
+        if (task.stat === 'totalScore') return s.totalScore || 0;
+        if (task.stat.endsWith('_best')) {
+            const gid = task.stat.replace('_best', '');
+            return this.highScores[gid] || 0;
+        }
+        return this.highScores[task.stat] || 0;
     },
 
     updateCreditsUI() {
@@ -227,23 +314,28 @@ const App = {
         this._toastTimer = setTimeout(() => t.classList.add('hidden'), 3000);
     },
 
-    buyCredits(amount) {
-        this.credits += amount;
-        this.updateCreditsUI();
-        this.save();
-        this.showToast(`+${amount} créditos adicionados!`);
+    async buyCredits(amount) {
+        try {
+            const data = await API.buyCredits(amount);
+            this.credits = data.credits;
+            this.updateCreditsUI();
+            this.showToast(`+${amount} créditos adicionados!`);
+        } catch (err) {
+            this.showToast('Erro: ' + err.message);
+        }
     },
 
-    unlockGame(game) {
-        if (this.credits < game.cost) return;
-        this.credits -= game.cost;
-        this.unlockedGames.push(game.id);
-        this.stats.unlockedCount = this.unlockedGames.length;
-        this.updateCreditsUI();
-        this.checkTasks();
-        this.save();
-        this.renderLobby();
-        this.showToast(`🔓 ${game.name} desbloqueado!`);
+    async unlockGame(game) {
+        try {
+            const data = await API.unlockGame(game.id, game.cost);
+            this.credits = data.credits;
+            this.unlockedGames = data.unlockedGames;
+            this.updateCreditsUI();
+            this.renderLobby();
+            this.showToast(`🔓 ${game.name} desbloqueado!`);
+        } catch (err) {
+            this.showToast('Erro: ' + err.message);
+        }
     },
 
     async playGame(gameId) {
@@ -254,6 +346,7 @@ const App = {
 
         this.currentGame = game;
         this.currentScore = 0;
+        this._gameScoreReported = false;
         document.getElementById('game-title').textContent = game.emoji + ' ' + game.name;
         document.getElementById('game-score').textContent = '0';
         document.getElementById('game-controls').textContent = game.controls;
@@ -267,7 +360,10 @@ const App = {
                 document.getElementById('game-score').textContent = s;
             },
             onGameOver: (finalScore) => {
-                this.recordGameEnd(gameId, finalScore);
+                if (!this._gameScoreReported) {
+                    this._gameScoreReported = true;
+                    this.recordGameEnd(gameId, finalScore);
+                }
             }
         });
     },
@@ -290,84 +386,51 @@ const App = {
         this.currentGameInstance = null;
         document.getElementById('game-overlay').classList.add('hidden');
         document.getElementById('game-container').innerHTML = '';
-        if (this.currentGame && this.currentScore > 0) {
+        if (this.currentGame && this.currentScore > 0 && !this._gameScoreReported) {
+            this._gameScoreReported = true;
             this.recordGameEnd(this.currentGame.id, this.currentScore);
         }
         this.currentGame = null;
     },
 
-    recordGameEnd(gameId, score) {
-        this.stats.gamesPlayed++;
-        this.stats.totalScore += score;
-        if (!this.stats.gamesPlayedList.includes(gameId)) {
-            this.stats.gamesPlayedList.push(gameId);
-        }
-        this.stats.uniqueGames = new Set(this.stats.gamesPlayedList).size;
-        if (!this.highScores[gameId] || score > this.highScores[gameId]) {
-            this.highScores[gameId] = score;
-        }
-        const statKey = gameId + '_best';
-        if (!this.stats[statKey] || score > this.stats[statKey]) {
-            this.stats[statKey] = score;
-        }
-        this.checkTasks();
-        this.save();
-    },
-
-    addStat(key, val) {
-        this.stats[key] = (this.stats[key] || 0) + val;
-        this.checkTasks();
-        this.save();
-    },
-
-    checkTasks() {
-        TASKS.forEach(t => {
-            if (this.completedTasks.includes(t.id)) return;
-            const progress = this.getTaskProgress(t);
-            if (progress >= t.target) {
-                this.completedTasks.push(t.id);
-                this.credits += t.reward;
-                this.updateCreditsUI();
-                this.showToast(`🎉 Tarefa "${t.name}" completa! +${t.reward} créditos`);
+    async recordGameEnd(gameId, score) {
+        try {
+            const data = await API.submitScore(gameId, score);
+            this.credits = data.credits;
+            this.stats = data.stats;
+            this.highScores = data.highScores;
+            this.completedTasks = data.completedTasks;
+            this.updateCreditsUI();
+            if (data.creditsEarned > 0) {
+                this.showToast(`🎉 Tarefa completa! +${data.creditsEarned} créditos`);
             }
-        });
-        this.save();
+        } catch (err) {
+            console.error('Erro ao salvar pontuação:', err);
+        }
     },
 
-    resetProgress() {
+    async addStat(key, val) {
+        try {
+            await API.submitStat(key, val);
+        } catch (err) {
+            console.error('Erro ao salvar stat:', err);
+        }
+    },
+
+    async resetProgress() {
         this.showModal('⚠️ Resetar Progresso', 'Tem certeza? Todo progresso, créditos e jogos desbloqueados serão perdidos.', [
             { text: 'Cancelar', class: 'btn btn-secondary', action: () => this.hideModal() },
-            { text: 'Resetar', class: 'btn btn-danger', action: () => {
-                localStorage.removeItem('arcade_save');
-                this.credits = 0; this.unlockedGames = []; this.stats = { gamesPlayed:0, totalScore:0, uniqueGames:0, unlockedCount:0, gamesPlayedList:[] };
-                this.highScores = {}; this.completedTasks = [];
-                this.updateCreditsUI(); this.renderLobby(); this.renderTasks(); this.renderProfile();
-                this.hideModal(); this.showToast('Progresso resetado');
+            { text: 'Resetar', class: 'btn btn-danger', action: async () => {
+                try {
+                    await API.resetProgress();
+                    await this.loadProfile();
+                    this.hideModal();
+                    this.showToast('Progresso resetado');
+                } catch (err) {
+                    this.showToast('Erro: ' + err.message);
+                }
             }}
         ]);
-    },
-
-    save() {
-        localStorage.setItem('arcade_save', JSON.stringify({
-            credits: this.credits,
-            unlockedGames: this.unlockedGames,
-            stats: this.stats,
-            highScores: this.highScores,
-            completedTasks: this.completedTasks,
-        }));
-    },
-
-    load() {
-        try {
-            const d = JSON.parse(localStorage.getItem('arcade_save'));
-            if (d) {
-                this.credits = d.credits || 0;
-                this.unlockedGames = d.unlockedGames || [];
-                this.stats = { ...this.stats, ...d.stats };
-                this.highScores = d.highScores || {};
-                this.completedTasks = d.completedTasks || [];
-            }
-        } catch(e) {}
     },
 };
 

@@ -1,19 +1,15 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Remover configuração padrão do nginx
-RUN rm /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copiar configuração customizada
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY package.json ./
+RUN npm install --production
 
-# Copiar arquivos do site
-COPY index.html /usr/share/nginx/html/
-COPY css/ /usr/share/nginx/html/css/
-COPY js/ /usr/share/nginx/html/js/
+COPY . .
 
-# Porta exposta
-EXPOSE 80
+EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+CMD ["node", "server/index.js"]
