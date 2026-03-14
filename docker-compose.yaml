@@ -14,11 +14,13 @@ services:
       timeout: 3s
       retries: 5
 
-  app:
+ app:
     build: .
     restart: unless-stopped
     ports:
       - "3000:3000"
+    labels:
+      - "coolify.port=3000"
     environment:
       DATABASE_URL: postgresql://${DB_USER:-arcade}:${DB_PASSWORD:-arcade}@db:5432/${DB_NAME:-arcade}
       JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
